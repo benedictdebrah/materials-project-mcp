@@ -61,5 +61,13 @@ git add .
 git commit -m "Add image generation feature"
 git push origin image-generation
 # Then open a pull request
-```
+______________________
+@online{yin2025,
+  author = {Yin, Xiangyu},
+  title = {Building an {MCP} {Server} for the {Materials} {Project}},
+  date = {2025-03-23},
+  url = {https://xiangyu-yin.com/content/post_mp_mcp.html},
+  langid = {en}
+}
+
 
