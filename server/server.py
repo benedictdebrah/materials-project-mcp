@@ -3,6 +3,13 @@ import logging
 from typing import Optional, List
 from mcp.server.fastmcp import FastMCP
 from pydantic import Field
+import base64
+import io
+import matplotlib.pyplot as plt
+from pymatgen.electronic_structure.plotter import BSPlotter
+from pymatgen.electronic_structure.bandstructure import BandStructureSymmLine
+from emmet.core.electronic_structure import BSPathType
+from typing import Literal
 
 # Materials Project client
 from mp_api.client import MPRester
@@ -123,6 +130,47 @@ async def get_structure_by_id(
         f"- **Reduced formula**: {structure.composition.reduced_formula}\n"
     )
     return text_summary
+
+
+
+
+@mcp.tool()
+async def plot_bandstructure(
+    material_id: str = Field(..., description="Materials Project ID (e.g. 'mp-149')"),
+    path_type: Literal["setyawan_curtarolo", "hinuma", "latimer_munro", "uniform"] = "setyawan_curtarolo",
+) -> str:
+    """
+    Plot the band structure for a given material from the Materials Project.
+    path_type: The type of band structure path to use.
+    material_id: The Materials Project ID of the material to plot.
+    
+    Returns a base64-encoded PNG image of the band structure.
+    """
+    logger.info(f"Plotting band structure for {material_id} with path_type: {path_type}")
+
+    with _get_mp_rester() as mpr:
+        if path_type == "uniform":
+            bs = mpr.get_bandstructure_by_material_id(material_id, line_mode=False)
+        else:
+            bs = mpr.get_bandstructure_by_material_id(
+                material_id, path_type=BSPathType(path_type)
+            )
+
+    if not isinstance(bs, BandStructureSymmLine):
+        return f"Cannot plot `{path_type}` band structure. Only line-mode paths are plottable."
+
+    plotter = BSPlotter(bs)
+    ax = plotter.get_plot()
+    fig = ax.get_figure()  
+
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", bbox_inches="tight")
+    plt.close(fig)
+    buf.seek(0)
+    img_b64 = base64.b64encode(buf.read()).decode("utf-8")
+
+    return f"![Band Structure](data:image/png;base64,{img_b64})"
+
 
 
 if __name__ == "__main__":
