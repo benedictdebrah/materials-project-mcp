@@ -33,7 +33,13 @@ mcp = FastMCP(
 
 def _get_mp_rester() -> MPRester:
     """
-    Helper function to initialize a MPRester session with the user's API key.
+    Initialize and return a MPRester session with the user's API key.
+    
+    Returns:
+        MPRester: An authenticated MPRester instance for querying the Materials Project API.
+        
+    Note:
+        If no API key is found in environment variables, attempts to initialize without key.
     """
     if not API_KEY:
         logger.warning(
@@ -47,28 +53,47 @@ def _get_mp_rester() -> MPRester:
 async def search_materials(
     elements: Optional[List[str]] = Field(
         default=None,
-        description="List of element symbols to filter by (e.g. ['Si', 'O']).",
+        description="List of element symbols to filter by (e.g. ['Si', 'O']). If None, searches across all elements.",
     ),
     band_gap_min: float = Field(
-        default=0.0, description="Lower bound for band gap filtering in eV."
+        default=0.0, 
+        description="Lower bound for band gap filtering in eV. Materials with band gaps below this value will be excluded.",
     ),
     band_gap_max: float = Field(
-        default=10.0, description="Upper bound for band gap filtering in eV."
+        default=10.0, 
+        description="Upper bound for band gap filtering in eV. Materials with band gaps above this value will be excluded.",
     ),
     is_stable: bool = Field(
         default=False,
-        description="Whether to only retrieve stable materials (True) or all (False).",
+        description="If True, only returns materials that are thermodynamically stable (energy above hull = 0). If False, returns all materials.",
     ),
     max_results: int = Field(
-        default=20, ge=1, le=200, description="Maximum number of results to return."
+        default=20, 
+        ge=1, 
+        le=200, 
+        description="Maximum number of results to return. Must be between 1 and 200.",
     ),
 ) -> str:
     """
-    Search for materials in the Materials Project database using basic filters:
-    - elements (list of elements to include)
-    - band_gap (range in eV)
-    - is_stable
-    Returns a formatted list of matches with their material_id, formula, and band gap.
+    Search for materials in the Materials Project database using various filters.
+    
+    This function allows searching for materials based on their elemental composition,
+    band gap range, and thermodynamic stability. Results are returned in a formatted
+    markdown string containing material IDs, formulas, band gaps, and energy above hull values.
+    
+    Args:
+        elements: Optional list of element symbols to filter by (e.g. ['Si', 'O'])
+        band_gap_min: Minimum band gap in eV (default: 0.0)
+        band_gap_max: Maximum band gap in eV (default: 10.0)
+        is_stable: Whether to only return stable materials (default: False)
+        max_results: Maximum number of results to return (default: 20, max: 200)
+        
+    Returns:
+        str: A formatted markdown string containing the search results
+        
+    Example:
+        >>> search_materials(elements=['Si', 'O'], band_gap_min=1.0, band_gap_max=5.0)
+        Returns materials containing Si and O with band gaps between 1 and 5 eV
     """
     logger.info("Starting search_materials query...")
     with _get_mp_rester() as mpr:
@@ -102,21 +127,34 @@ async def search_materials(
 
 @mcp.tool()
 async def get_structure_by_id(
-    material_id: str = Field(..., description="Materials Project ID (e.g. 'mp-149')")
+    material_id: str = Field(
+        ..., 
+        description="Materials Project ID (e.g. 'mp-149'). Must be a valid MP ID."
+    )
 ) -> str:
     """
-    Retrieve the final computed structure for a given material_id from the Materials Project.
-    Returns a plain text summary of the structure (lattice, sites, formula).
+    Retrieve and format the crystal structure for a given material from the Materials Project.
+    
+    This function fetches the final computed structure for a material and returns a
+    formatted summary including the lattice parameters, number of sites, and chemical formula.
+    
+    Args:
+        material_id: The Materials Project ID of the material (e.g. 'mp-149')
+        
+    Returns:
+        str: A formatted markdown string containing the structure information
+        
+    Example:
+        >>> get_structure_by_id('mp-149')
+        Returns the crystal structure information for silicon (mp-149)
     """
     logger.info(f"Fetching structure for {material_id}...")
     with _get_mp_rester() as mpr:
-        # Shortcut method to get just the final structure
         structure = mpr.get_structure_by_material_id(material_id)
 
     if not structure:
         return f"No structure found for {material_id}."
 
-    # Summarize the structure
     formula = structure.composition.reduced_formula
     lattice = structure.lattice
     sites_count = len(structure)
@@ -132,19 +170,38 @@ async def get_structure_by_id(
     return text_summary
 
 
-
-
 @mcp.tool()
 async def plot_bandstructure(
-    material_id: str = Field(..., description="Materials Project ID (e.g. 'mp-149')"),
-    path_type: Literal["setyawan_curtarolo", "hinuma", "latimer_munro", "uniform"] = "setyawan_curtarolo",
+    material_id: str = Field(
+        ..., 
+        description="Materials Project ID (e.g. 'mp-149'). Must be a valid MP ID."
+    ),
+    path_type: Literal["setyawan_curtarolo", "hinuma", "latimer_munro", "uniform"] = Field(
+        default="setyawan_curtarolo",
+        description="Type of k-point path to use for the band structure plot. Options are:\n"
+                   "- setyawan_curtarolo: Standard path for cubic systems\n"
+                   "- hinuma: Standard path for hexagonal systems\n"
+                   "- latimer_munro: Alternative path for cubic systems\n"
+                   "- uniform: Uniform k-point sampling (not recommended for plotting)"
+    ),
 ) -> str:
     """
-    Plot the band structure for a given material from the Materials Project.
-    path_type: The type of band structure path to use.
-    material_id: The Materials Project ID of the material to plot.
+    Generate and return a band structure plot for a given material.
     
-    Returns a base64-encoded PNG image of the band structure.
+    This function fetches the band structure data from the Materials Project and creates
+    a plot showing the electronic band structure along high-symmetry k-points. The plot
+    is returned as a base64-encoded PNG image embedded in a markdown string.
+    
+    Args:
+        material_id: The Materials Project ID of the material (e.g. 'mp-149')
+        path_type: The type of k-point path to use for the band structure plot
+        
+    Returns:
+        str: A markdown string containing the base64-encoded band structure plot
+        
+    Example:
+        >>> plot_bandstructure('mp-149', path_type='setyawan_curtarolo')
+        Returns a band structure plot for silicon using the standard cubic path
     """
     logger.info(f"Plotting band structure for {material_id} with path_type: {path_type}")
 
@@ -171,6 +228,39 @@ async def plot_bandstructure(
 
     return f"![Band Structure](data:image/png;base64,{img_b64})"
 
+
+@mcp.tool()
+async def get_dos_by_id(
+    material_id: str = Field(
+        ..., 
+        description="Materials Project ID (e.g. 'mp-149'). Must be a valid MP ID."
+    ),
+) -> str:
+    """
+    Retrieve the density of states (DOS) data for a given material.
+    
+    This function fetches the density of states data from the Materials Project
+    for the specified material. The DOS data includes information about the
+    electronic states available to electrons in the material.
+    
+    Args:
+        material_id: The Materials Project ID of the material (e.g. 'mp-149')
+        
+    Returns:
+        str: A string containing the density of states information
+        
+    Example:
+        >>> get_dos_by_id('mp-149')
+        Returns the density of states data for silicon
+    """   
+    logger.info(f"Fetching density of states for {material_id}...")
+    with _get_mp_rester() as mpr:
+        dos = mpr.get_dos_by_material_id(material_id)
+
+    if not dos:
+        return f"No density of states found for {material_id}."
+    
+    return f"Density of states for {material_id}: {dos}"
 
 
 if __name__ == "__main__":
