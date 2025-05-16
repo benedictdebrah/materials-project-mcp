@@ -3,11 +3,11 @@ import logging
 from typing import Optional, List
 from mcp.server.fastmcp import FastMCP
 from pydantic import Field
-import base64
-import io
 import matplotlib.pyplot as plt
 from pymatgen.electronic_structure.plotter import BSPlotter
 from pymatgen.electronic_structure.bandstructure import BandStructureSymmLine
+from pymatgen.phonon.bandstructure import PhononBandStructureSymmLine
+from pymatgen.phonon.plotter import PhononBSPlotter
 from emmet.core.electronic_structure import BSPathType
 from typing import Literal
 
@@ -68,7 +68,7 @@ async def search_materials(
         description="If True, only returns materials that are thermodynamically stable (energy above hull = 0). If False, returns all materials.",
     ),
     max_results: int = Field(
-        default=20, 
+        default=50, 
         ge=1, 
         le=200, 
         description="Maximum number of results to return. Must be between 1 and 200.",
@@ -86,7 +86,7 @@ async def search_materials(
         band_gap_min: Minimum band gap in eV (default: 0.0)
         band_gap_max: Maximum band gap in eV (default: 10.0)
         is_stable: Whether to only return stable materials (default: False)
-        max_results: Maximum number of results to return (default: 20, max: 200)
+        max_results: Maximum number of results to return (default: 50, max: 200)
         
     Returns:
         str: A formatted markdown string containing the search results
@@ -171,7 +171,7 @@ async def get_structure_by_id(
 
 
 @mcp.tool()
-async def plot_bandstructure(
+async def get_electronic_bandstructure(
     material_id: str = Field(
         ..., 
         description="Materials Project ID (e.g. 'mp-149'). Must be a valid MP ID."
@@ -186,7 +186,7 @@ async def plot_bandstructure(
     ),
 ) -> str:
     """
-    Generate and return a band structure plot for a given material.
+    Generate and return a electronic band structure plot for a given material.
     
     This function fetches the band structure data from the Materials Project and creates
     a plot showing the electronic band structure along high-symmetry k-points. The plot
@@ -197,10 +197,10 @@ async def plot_bandstructure(
         path_type: The type of k-point path to use for the band structure plot
         
     Returns:
-        str: A markdown string containing the base64-encoded band structure plot
+        A plot of the electronic band structure 
         
     Example:
-        >>> plot_bandstructure('mp-149', path_type='setyawan_curtarolo')
+        >>> get_electronic_bandstructure('mp-149', path_type='setyawan_curtarolo')
         Returns a band structure plot for silicon using the standard cubic path
     """
     logger.info(f"Plotting band structure for {material_id} with path_type: {path_type}")
@@ -219,27 +219,20 @@ async def plot_bandstructure(
     plotter = BSPlotter(bs)
     ax = plotter.get_plot()
     fig = ax.get_figure()  
-
-    buf = io.BytesIO()
-    fig.savefig(buf, format="png", bbox_inches="tight")
-    plt.close(fig)
-    buf.seek(0)
-    img_b64 = base64.b64encode(buf.read()).decode("utf-8")
-
-    return f"![Band Structure](data:image/png;base64,{img_b64})"
+    fig.show()  
 
 
 @mcp.tool()
-async def get_dos_by_id(
+async def get_electronic_dos_by_id(
     material_id: str = Field(
         ..., 
         description="Materials Project ID (e.g. 'mp-149'). Must be a valid MP ID."
     ),
 ) -> str:
     """
-    Retrieve the density of states (DOS) data for a given material.
+    Retrieve the electronic density of states (DOS) data for a given material.
     
-    This function fetches the density of states data from the Materials Project
+    This function fetches the electronic density of states data from the Materials Project
     for the specified material. The DOS data includes information about the
     electronic states available to electrons in the material.
     
@@ -250,18 +243,82 @@ async def get_dos_by_id(
         str: A string containing the density of states information
         
     Example:
-        >>> get_dos_by_id('mp-149')
-        Returns the density of states data for silicon
+        >>> get_electronic_dos_by_id('mp-149')
+        Returns the electronic density of states data for silicon
     """   
-    logger.info(f"Fetching density of states for {material_id}...")
+    logger.info(f"Fetching electronic density of states for {material_id}...")
     with _get_mp_rester() as mpr:
         dos = mpr.get_dos_by_material_id(material_id)
 
     if not dos:
         return f"No density of states found for {material_id}."
     
-    return f"Density of states for {material_id}: {dos}"
+    return f"Electronic density of states for {material_id}: {dos}"
 
+#phonons
+@mcp.tool()
+async def get_phonon_bandstructure(
+    material_id: str = Field(
+        ..., 
+        description="Materials Project ID (e.g. 'mp-149'). Must be a valid MP ID."
+    ),
+) -> str:
+    """
+    Retrieve the phonon band structure for a given material.
+    
+    This function fetches the phonon band structure data from the Materials Project
+    for the specified material. The phonon band structure includes information about
+    the vibrational modes and frequencies of the material.
+    
+    Args:
+        material_id: The Materials Project ID of the material (e.g. 'mp-149')
+        
+    Returns:
+        A plot of the phonon band structure 
+    """
+
+    logger.info(f"Fetching phonon band structure for {material_id}...")
+    with _get_mp_rester() as mpr:
+        bs = mpr.get_phonon_bandstructure_by_material_id(material_id)
+
+    if not isinstance(bs, PhononBandStructureSymmLine):
+        return "Cannot plot phonon band structure. Only line-mode paths are plottable."    
+
+    plotter = PhononBSPlotter(bs)
+    fig = plotter.get_plot()
+    
+    plt.title(f"Phonon Band Structure for {material_id}")
+    plt.ylabel("Frequency (THz)")
+    plt.tight_layout()
+    
+    return fig  
+ 
+
+
+
+@mcp.tool()
+async def get_phonon_dos_by_id(
+    material_id: str = Field(
+        ..., 
+        description="Materials Project ID (e.g. 'mp-149'). Must be a valid MP ID."
+    ),
+) -> str:
+    """
+    Retrieve the phonon density of states (DOS) data for a given material.
+    
+    This function fetches the phonon density of states data from the Materials Project
+    for the specified material. The DOS data includes information about the
+    vibrational modes and frequencies of the material.
+    """
+    logger.info(f"Fetching phonon density of states for {material_id}...")
+    with _get_mp_rester() as mpr:
+        dos = mpr.get_phonon_dos_by_material_id(material_id)
+
+    if not dos:
+        return f"No density of states found for {material_id}."
+
+    return f"Phonon density of states for {material_id}: {dos}"
+    
 
 if __name__ == "__main__":
     logger.info("Starting Materials Project MCP server...")
