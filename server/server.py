@@ -1,8 +1,6 @@
-
 import os
 import logging
 from typing import Optional, List
-from emmet.core.electronic_structure import BSPathType
 from mcp.server.fastmcp import FastMCP
 from pydantic import Field
 
@@ -17,7 +15,7 @@ API_KEY = os.environ.get("MP_API_KEY")
 
 # Create the MCP server instance
 mcp = FastMCP(
-    name="Materials Project MCP",
+    name="Materials Project",
     version="0.0.1",
     description=(
         "A Model Context Protocol (MCP) server that exposes query tools "
