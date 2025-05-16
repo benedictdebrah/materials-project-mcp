@@ -94,7 +94,7 @@ mcp install server.py
       "args": [
         "run", 
         "--with", 
-        "mcp[cli],aiohttp,pydantic,mp_api", 
+        "mcp[cli],aiohttp,pydantic,mp_api,pymatgen,emmet-core", 
         "/path/to/your/materials-project-mcp/server/server.py"
       ],
       "env": {
