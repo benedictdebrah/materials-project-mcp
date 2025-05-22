@@ -1,6 +1,6 @@
 import os
 import logging
-from typing import Optional, List
+from typing import Optional, List, Union
 from mcp.server.fastmcp import FastMCP
 from pydantic import Field
 import matplotlib.pyplot as plt
@@ -319,6 +319,81 @@ async def get_phonon_dos_by_id(
 
     return f"Phonon density of states for {material_id}: {dos}"
     
+
+@mcp.tool()
+async def get_ion_reference_data_for_chemsys(
+    chemsys: Optional[Union[List, str]] = Field(
+        ..., 
+        description="Chemical system string comprising element symbols separated by dashes, e.g., 'Li-Fe-O' or List of element symbols, e.g., ['Li', 'Fe', 'O']"
+    )
+) -> str: 
+    """
+    Downloads aqueouse  ion reference data used in the contruction Pourbaix 
+    The data returned from this method can be passed to get_ion_entries(). 
+
+    Args:
+        chemsys (str | list):  Chemical system string comprising element
+                symbols separated by dashes, e.g., "Li-Fe-O" or List of element
+                symbols, e.g., ["Li", "Fe", "O"].
+
+    Returns:
+            str: markdown format of the reference data for ions 
+    """
+
+    logger.info("Fetch reference data for ion by Chemsys")
+    mpr_rester = _get_mp_rester()
+
+    with mpr_rester as mpr: 
+        ion_reference_data = mpr.get_ion_reference_data_for_chemsys(chemsys=chemsys)
+
+    if not ion_reference_data: 
+        logger.info(f"data not found for {chemsys}")
+        return f"No ion reference data for {chemsys}"
+
+
+    ion_data = f"Ion Reference Data for Chemical System: {chemsys}\n\n"
+
+    for idx, ion in enumerate(ion_reference_data, 1): 
+        identifier = ion.get("identifier", "Unknown")
+        formula = ion.get("formula", "Unknown")
+        data = ion.get("data", {})
+
+        # get the properties for idx 
+        charge_info = data.get("charge", {})
+        charge_value = charge_info.get('value', 0)
+        charge_display = charge_info.get('display', str(charge_value))
+            
+        delta_gf_info = data.get('ΔGᶠ', {})
+        delta_gf_value = delta_gf_info.get('value', 'N/A')
+        delta_gf_display = delta_gf_info.get('display', f'{delta_gf_value} kJ/mol' if delta_gf_value != 'N/A' else 'N/A')
+            
+
+        maj_elements = data.get('MajElements', 'Unknown')
+        ref_solid = data.get('RefSolid', 'Unknown')
+
+        ref_solid_info = data.get('ΔGᶠRefSolid', {})
+        ref_solid_value = ref_solid_info.get('value', 'N/A')
+        ref_solid_display = ref_solid_info.get('display', f'{ref_solid_value} kJ/mol' if ref_solid_value != 'N/A' else 'N/A')
+
+        reference = data.get('reference', 'No reference provided')
+
+        ion_data +=  f"""## {idx}. {identifier}
+
+            | Property | Value |
+            |----------|--------|
+            | *Formula* | {formula} |
+            | *Charge* | {charge_display} |
+            | *Formation Energy (ΔGᶠ)* | {delta_gf_display} |
+            | *Major Elements* | {maj_elements} |
+            | *Reference Solid* | {ref_solid} |
+            | *Ref. Solid ΔGᶠ* | {ref_solid_display} |
+
+            *Reference:* {reference}
+        """
+
+    return ion_data
+
+
 
 if __name__ == "__main__":
     logger.info("Starting Materials Project MCP server...")
