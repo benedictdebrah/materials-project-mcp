@@ -366,7 +366,6 @@ async def get_ion_reference_data_for_chemsys(
         delta_gf_info = data.get('ΔGᶠ', {})
         delta_gf_value = delta_gf_info.get('value', 'N/A')
         delta_gf_display = delta_gf_info.get('display', f'{delta_gf_value} kJ/mol' if delta_gf_value != 'N/A' else 'N/A')
-            
 
         maj_elements = data.get('MajElements', 'Unknown')
         ref_solid = data.get('RefSolid', 'Unknown')
@@ -392,6 +391,59 @@ async def get_ion_reference_data_for_chemsys(
         """
 
     return ion_data
+
+@mcp.tool()
+async def get_cohesive_energy(
+        material_ids: List[str] = Field(
+            ...,
+            description="List of Material IDs to compute cohesive energies"
+        ),
+        normalization: str = Field(
+            default="atom",
+            description="The normalization to use, whether to normalize cohesive energy by number of atoms (deflaut) or by number of formula units  "
+        )
+):
+    """
+    Obtain the cohesive energy of the structure(s) corresponding to single or multiple material IDs
+
+    Args:
+        material_ids: List to material IDs to compute their cohesive energy
+        normalization: Whether to normalize cohesive energy using number of atoms or number of formula
+
+    Returns:
+        str: The markdown of  cohesive energies (in eV/atom or eV/formula unit) for
+            each material, indexed by Material IDs .
+
+    """
+    logger.info("Getting cohesive energy for material IDs")
+
+    with _get_mp_rester() as mpr:
+        cohesive_energies = mpr.get_cohesive_energy(material_ids=material_ids, normalization=normalization)
+
+    if not cohesive_energies:
+        logger.info(f"No cohesive energy was retrived for {material_ids}")
+        return f"No cohesive energies found for these Material IDs: {material_ids}"
+
+
+    energies = f"## Cohesive Energies \n"
+    for identifier, energy in cohesive_energies.items():
+        unit = "eV/atom" if normalization == "atom" else "eV/formula unit"
+        energies += f"-- **{identifier}** : {energy} {unit}\n"
+
+    return energies
+
+
+@mcp.tool()
+async  def get_atom_reference_data(
+        funcs,
+):
+    pass 
+
+
+
+
+
+
 
 
 
