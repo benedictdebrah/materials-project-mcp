@@ -10,6 +10,7 @@ from pymatgen.phonon.bandstructure import PhononBandStructureSymmLine
 from pymatgen.phonon.plotter import PhononBSPlotter
 from emmet.core.electronic_structure import BSPathType
 from typing import Literal
+from dotenv import load_dotenv
 
 # Materials Project client
 from mp_api.client import MPRester
@@ -17,7 +18,7 @@ from mp_api.client import MPRester
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("materials_project_mcp")
-
+load_dotenv()
 API_KEY = os.environ.get("MP_API_KEY")
 
 # Create the MCP server instance
@@ -411,7 +412,7 @@ async def get_cohesive_energy(
         normalization: Whether to normalize cohesive energy using number of atoms or number of formula
 
     Returns:
-        str: The markdown of  cohesive energies (in eV/atom or eV/formula unit) for
+        str: The Markdown of  cohesive energies (in eV/atom or eV/formula unit) for
             each material, indexed by Material IDs .
 
     """
@@ -434,14 +435,33 @@ async def get_cohesive_energy(
 
 
 @mcp.tool()
-async  def get_atom_reference_data(
-        funcs,
-):
-    pass 
+async def get_atom_reference_data(
+        funcs: tuple[str, ...] = Field(
+            default=("PBE",),
+            description="list of functionals to retrieve data for "
+        )
+) -> str:
+    """
+    Retrieve reference energies of isolated neutral atoms. this energies can be used to calculate formations energies of compounds,
+    Write the meaning of these funcs eg thier full names 
+    Args:
+        funcs ([str] or None ) : list of functionals to retrieve data for.
+    Returns:
+        str : Markdown containing isolated atom energies 
+    """
+    logger.info("Getting Atom Reference Data")
+    with _get_mp_rester() as mpr:
+        atom_data = mpr.get_atom_reference_data(funcs=funcs)
 
+    if not atom_data:
+        return f"No atom data retrieved for functionals {funcs}"
 
+    atom_references = "| Element | Reference Energy (eV/atom) |\n"
 
+    for element, energy in atom_data.items():
+        atom_references += f"| **{element}** | {energy} | \n"
 
+    return atom_references
 
 
 
