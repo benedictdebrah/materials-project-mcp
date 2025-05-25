@@ -443,7 +443,7 @@ async def get_atom_reference_data(
 ) -> str:
     """
     Retrieve reference energies of isolated neutral atoms. this energies can be used to calculate formations energies of compounds,
-    Write the meaning of these funcs eg thier full names 
+    Write the meaning of these funcs eg thier full names
     Args:
         funcs ([str] or None ) : list of functionals to retrieve data for.
     Returns:
