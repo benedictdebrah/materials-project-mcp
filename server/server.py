@@ -495,7 +495,21 @@ async def get_charge_density_by_id(
     if not charge_density:
         return f"No data found for material {charge_density}"
 
-    print(charge_density)
+    density_data = f"""
+            ## Material ID: {material_id}
+        
+            ### Structure Summary:
+            {charge_density.structure}
+        
+            ### Charge Density (Total):
+            {charge_density.data["total"]}
+            
+            ### Is charge Density Polarized : 
+            {charge_density.is_spin_polarized}
+            
+        """
+
+    return density_data
 
 if __name__ == "__main__":
     logger.info("Starting Materials Project MCP server...")
