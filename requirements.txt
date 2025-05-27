@@ -80,7 +80,7 @@ multidict==6.4.3
 narwhals==1.39.1
 nest-asyncio==1.6.0
 networkx==3.4.2
-numpy==2.2.5
+numpy==1.26.4
 orjson==3.10.18
 packaging==25.0
 palettable==3.3.3
