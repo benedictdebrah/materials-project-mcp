@@ -393,6 +393,7 @@ async def get_ion_reference_data_for_chemsys(
 
     return ion_data
 
+
 @mcp.tool()
 async def get_cohesive_energy(
         material_ids: List[str] = Field(
@@ -465,7 +466,63 @@ async def get_atom_reference_data(
 
 
 
+@mcp.tool()
+async def get_magnetic_data_by_id(
+        material_id: str = Field(
+            ...,
+            description="Material ID of the material"
+        )
+): 
+    """
 
+    Args:
+        material_id:
+
+    Returns:
+
+    """
+
+
+    return None
+
+@mcp.tool()
+async def get_charge_density_by_id(
+        material_id: str = Field(
+            ...,
+            description="Material ID of the material"
+        )
+):
+    """
+    Get charge density data for a given materials project ID
+    Args:
+        material_id: Material Project ID
+
+    Returns:
+        str :
+
+    """
+    logging.info(f"Getting charge density of material {material_id}")
+    with _get_mp_rester() as mpr:
+        charge_density = mpr.get_charge_density_from_material_id(material_id=material_id)
+
+    if not charge_density:
+        return f"No data found for material {charge_density}"
+
+    density_data = f"""
+            ## Material ID: {material_id}
+        
+            ### Structure Summary:
+            {charge_density.structure}
+        
+            ### Charge Density (Total):
+            {charge_density.data["total"]}
+            
+            ### Is charge Density Polarized : 
+            {charge_density.is_spin_polarized}
+            
+        """
+
+    return density_data
 
 if __name__ == "__main__":
     logger.info("Starting Materials Project MCP server...")
