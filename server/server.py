@@ -468,9 +468,22 @@ async def get_atom_reference_data(
 
 @mcp.tool()
 async def get_magnetic_data_by_id(
-
+        material_id: str = Field(
+            ...,
+            description="Material ID of the material"
+        )
 ): 
-    pass 
+    """
+
+    Args:
+        material_id:
+
+    Returns:
+
+    """
+
+
+    return None
 
 @mcp.tool()
 async def get_charge_density_by_id(
