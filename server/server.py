@@ -9,6 +9,7 @@ from pymatgen.electronic_structure.bandstructure import BandStructureSymmLine
 from pymatgen.phonon.bandstructure import PhononBandStructureSymmLine
 from pymatgen.phonon.plotter import PhononBSPlotter
 from emmet.core.electronic_structure import BSPathType
+from emmet.core.magnetism import MagnetismDoc
 from typing import Literal
 from dotenv import load_dotenv
 
@@ -468,26 +469,49 @@ async def get_atom_reference_data(
 
 @mcp.tool()
 async def get_magnetic_data_by_id(
-        material_id: str = Field(
+        material_ids: list[str] = Field(
             ...,
             description="Material ID of the material"
-        )
-): 
+        ),
+) -> str: 
     """
+    Get magnetic data using material ID. The materials api provides computed
+    magnetic propertics from Density Functional Theory (DFT) calculations. This includes
+    1. Magnetic ordering
+    2. Total Magnetization
+    3. Site-projected Magnetic Moments
+    4. Spin-polarized electronic structures
 
     Args:
-        material_id:
-
+        material_id: Material ID of the material e.g., mp-20664, which is Mn2Sb
+    
     Returns:
-
+        (str): returns a markdown string containing the magnetic data for the material.
     """
+    logger.info(f"Getting magnetic data for material{material_ids}")
+    with _get_mp_rester() as mpr:
+        magnetic_data = mpr.magnetism.search(material_ids=material_ids)
 
 
-    return None
+    if not magnetic_data:
+        logger.info(f"Not data collected for {material_ids}")
+        return f"No magnetic data found for material {material_ids}"
+    
+    data_md  = f"|##      Magnetic Data for Material IDs    |\n\n"
+    for idx, model in enumerate(magnetic_data): 
+        data_md += f"idx : {idx}"
+        data = model.model_dump()
+        for key, value in data.items(): 
+            data_md += f"| **{key}       :         {value}   |\n\n"
+            
+    
+    return data_md
+    
+
 
 @mcp.tool()
 async def get_charge_density_by_id(
-        material_id: str = Field(
+        material_ids: str = Field(
             ...,
             description="Material ID of the material"
         )
@@ -501,15 +525,17 @@ async def get_charge_density_by_id(
         str :
 
     """
-    logging.info(f"Getting charge density of material {material_id}")
+    logging.info(f"Getting charge density of material {material_ids}")
     with _get_mp_rester() as mpr:
-        charge_density = mpr.get_charge_density_from_material_id(material_id=material_id)
+        charge_density = mpr.get_charge_density_from_material_id(material_id=material_ids)
+        logger.info(f"Charge density data retrieved for {material_ids}")
+        
 
     if not charge_density:
         return f"No data found for material {charge_density}"
 
     density_data = f"""
-            ## Material ID: {material_id}
+            ## Material ID: {material_ids}
         
             ### Structure Summary:
             {charge_density.structure}
@@ -523,6 +549,9 @@ async def get_charge_density_by_id(
         """
 
     return density_data
+
+
+
 
 if __name__ == "__main__":
     logger.info("Starting Materials Project MCP server...")
