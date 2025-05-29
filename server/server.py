@@ -551,6 +551,45 @@ async def get_charge_density_by_id(
     return density_data
 
 
+@mcp.tool()
+async def get_dielectric_data_by_id(
+        material_id: str = Field(
+            ..., 
+            description="Material ID of the material"
+    )
+) -> str: 
+    """
+    Gets the dielectric data for a given material. Dielectric is a 
+    material the can be polarized by an applied electric field. 
+    The mathematical description of the dielectric effect is a tensor 
+    constant of proportionality that relates an externally applied electric field to the field within the material
+    
+    Args: 
+        material_id (str): Material ID for the material
+
+    Returns: 
+        str: markdown of the dielectric data
+
+
+    """
+    logger.info(f"Getting Dielectric data for material: {material_id}")
+    with _get_mp_rester() as mpr: 
+        dielectric_data = mpr.materials.dielectric.search(material_id)
+    
+    if not dielectric_data: 
+        logger.info(f"No data found for material {material_id}")
+        return f"No data for the material: {material_id}"
+
+    data_md  = f"|##      Magnetic Data for Material IDs    |\n\n"
+    for idx, model in enumerate(dielectric_data): 
+        data_md += f"idx : {idx}"
+        data = model.model_dump()
+        for key, value in data.items(): 
+            data_md += f"| **{key}    :    {value}   |\n\n"
+            
+    return data_md
+    
+
 
 
 if __name__ == "__main__":
