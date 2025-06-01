@@ -591,6 +591,25 @@ async def get_dielectric_data_by_id(
     
 
 
+@mcp.tool()
+async def get_diffraction_patterns(
+    material_id : str = Field(
+        ..., 
+        description="Material ID of the material "
+    )
+): 
+    pass 
+
+
+
+
+
+
+
+
+
+
+
 
 if __name__ == "__main__":
     logger.info("Starting Materials Project MCP server...")
