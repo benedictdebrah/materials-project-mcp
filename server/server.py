@@ -6,10 +6,11 @@ from pydantic import Field
 import matplotlib.pyplot as plt
 from pymatgen.electronic_structure.plotter import BSPlotter
 from pymatgen.electronic_structure.bandstructure import BandStructureSymmLine
+from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
+from pymatgen.analysis.diffraction.xrd import XRDCalculator
 from pymatgen.phonon.bandstructure import PhononBandStructureSymmLine
 from pymatgen.phonon.plotter import PhononBSPlotter
 from emmet.core.electronic_structure import BSPathType
-from emmet.core.magnetism import MagnetismDoc
 from typing import Literal
 from dotenv import load_dotenv
 
@@ -613,12 +614,10 @@ async def get_diffraction_patterns(
     
     """
     logger.info(f"Getting the Diffraction Pattern of element: {material_id}")
-    from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
-    from pymatgen.analysis.diffraction.xrd import XRDCalculator
+  
     with _get_mp_rester() as mpr: 
         # first retrieve the relevant structure 
         structure = mpr.get_structure_by_material_id(material_id)
-
     try: 
         sga = SpacegroupAnalyzer(structure=structure)
         conventional_structure  = sga.get_conventional_standard_structure()
@@ -628,6 +627,7 @@ async def get_diffraction_patterns(
     except: 
         logging.error("Error occured when function get_diffraction_patterns ")
         return f"No diffraction pattern retrived for material : {material_id}"
+
 
 
 
