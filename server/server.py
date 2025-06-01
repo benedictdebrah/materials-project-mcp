@@ -6,10 +6,11 @@ from pydantic import Field
 import matplotlib.pyplot as plt
 from pymatgen.electronic_structure.plotter import BSPlotter
 from pymatgen.electronic_structure.bandstructure import BandStructureSymmLine
+from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
+from pymatgen.analysis.diffraction.xrd import XRDCalculator
 from pymatgen.phonon.bandstructure import PhononBandStructureSymmLine
 from pymatgen.phonon.plotter import PhononBSPlotter
 from emmet.core.electronic_structure import BSPathType
-from emmet.core.magnetism import MagnetismDoc
 from typing import Literal
 from dotenv import load_dotenv
 
@@ -562,7 +563,8 @@ async def get_dielectric_data_by_id(
     Gets the dielectric data for a given material. Dielectric is a 
     material the can be polarized by an applied electric field. 
     The mathematical description of the dielectric effect is a tensor 
-    constant of proportionality that relates an externally applied electric field to the field within the material
+    constant of proportionality that relates an externally applied electric 
+    field to the field within the material
     
     Args: 
         material_id (str): Material ID for the material
@@ -589,6 +591,48 @@ async def get_dielectric_data_by_id(
             
     return data_md
     
+
+
+@mcp.tool()
+async def get_diffraction_patterns(
+    material_id : str = Field(
+        ..., 
+        description="Material ID of the material "
+    )
+) -> str: 
+    """
+    Gets diffraction patterns of a material given its ID. 
+    Diffraction occurs when waves (electrons, x-rays, neutrons)
+    scattering from obstructinos act as a secondary sources of progations 
+
+    Args: 
+        material id (str): the material id of the material to get the diffracton pattern 
+
+
+    Return: 
+        str: markdown of the patterns 
+    
+    """
+    logger.info(f"Getting the Diffraction Pattern of element: {material_id}")
+  
+    with _get_mp_rester() as mpr: 
+        # first retrieve the relevant structure 
+        structure = mpr.get_structure_by_material_id(material_id)
+    try: 
+        sga = SpacegroupAnalyzer(structure=structure)
+        conventional_structure  = sga.get_conventional_standard_structure()
+        calculator = XRDCalculator(wavelength="CuKa")
+        pattern = calculator.get_pattern(conventional_structure)
+        return str(pattern)
+    except: 
+        logging.error("Error occured when function get_diffraction_patterns ")
+        return f"No diffraction pattern retrived for material : {material_id}"
+
+
+
+
+
+
 
 
 
