@@ -603,7 +603,7 @@ async def get_diffraction_patterns(
     """
     Gets diffraction patterns of a material given its ID. 
     Diffraction occurs when waves (electrons, x-rays, neutrons)
-    scattering from obstructinos act as a secondary sources of progations 
+    scattering from obstructions act as a secondary sources of propagations
 
     Args: 
         material id (str): the material id of the material to get the diffracton pattern 
@@ -625,8 +625,58 @@ async def get_diffraction_patterns(
         pattern = calculator.get_pattern(conventional_structure)
         return str(pattern)
     except: 
-        logging.error("Error occured when function get_diffraction_patterns ")
-        return f"No diffraction pattern retrived for material : {material_id}"
+        logging.error("Error occurred when function get_diffraction_patterns ")
+        return f"No diffraction pattern retrieved for material : {material_id}"
+    
+
+
+    
+@mcp.tool()
+async def get_xRay_absorption_spectra(
+    material_ids: List[str] = Field(
+        ..., 
+        description=""
+    )
+): 
+    """
+    Obtain X-ray Absorption Spectra using single or multiple IDs,
+    following the methodology as discussed by Mathew et al and Chen et al.
+
+    Args: 
+        material_ids (List[str]) : material_ids of the elements
+    
+    Return: 
+        str: 
+    
+    """
+    logging.info("")
+    with _get_mp_rester() as mpr: 
+        xas_doc = mpr.materials.xas.search(material_ids=material_ids)
+
+    if not xas_doc: 
+        logging.info(f"No data retrieve for material(s) : {material_ids}")
+        return f"No data retrieve for material(s) : {material_ids}"
+
+    data_md = f"|##      Magnetic Data for Material IDs    |\n\n"
+    for idx, model in enumerate(xas_doc):
+        data_md += f"idx : {idx}"
+        data = model.model_dump()
+        for key, value in data.items():
+            data_md += f"| **{key}  :  {value}   |\n\n"
+
+    return data_md
+
+@mcp.tool()
+async def get_elastic_constants(
+    material_ids: List[str] = Field(
+        ..., 
+        description=""
+    )
+):
+    pass 
+
+
+
 
 
 
