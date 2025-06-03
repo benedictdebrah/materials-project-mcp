@@ -582,7 +582,7 @@ async def get_dielectric_data_by_id(
         logger.info(f"No data found for material {material_id}")
         return f"No data for the material: {material_id}"
 
-    data_md  = f"|##      Magnetic Data for Material IDs    |\n\n"
+    data_md  = f"|##    Dielectric Data  for Material IDs    |\n\n"
     for idx, model in enumerate(dielectric_data): 
         data_md += f"idx : {idx}"
         data = model.model_dump()
@@ -635,9 +635,9 @@ async def get_diffraction_patterns(
 async def get_xRay_absorption_spectra(
     material_ids: List[str] = Field(
         ..., 
-        description=""
+        description="Material ID of the material"
     )
-): 
+) -> str:
     """
     Obtain X-ray Absorption Spectra using single or multiple IDs,
     following the methodology as discussed by Mathew et al and Chen et al.
@@ -657,7 +657,7 @@ async def get_xRay_absorption_spectra(
         logging.info(f"No data retrieve for material(s) : {material_ids}")
         return f"No data retrieve for material(s) : {material_ids}"
 
-    data_md = f"|##      Magnetic Data for Material IDs    |\n\n"
+    data_md = f"|##  X-ray absorption spectra for Material IDs    |\n\n"
     for idx, model in enumerate(xas_doc):
         data_md += f"idx : {idx}"
         data = model.model_dump()
@@ -666,16 +666,40 @@ async def get_xRay_absorption_spectra(
 
     return data_md
 
+
 @mcp.tool()
 async def get_elastic_constants(
     material_ids: List[str] = Field(
         ..., 
-        description=""
+        description="Material ID of the material"
     )
 ):
-    pass 
+    """
+    Obtain Elastic constants given material IDs.
+    Elasticity describes a material's ability to resist deformations
+    (i.e. size and shape) when subjected to external forces.
 
+    :param material_ids :   material ID(s) of the elements
 
+    :return:
+        str: markdown of the elastic constants
+
+    """
+    logging.info(f"Getting Elastic Constant for material(s): {material_ids}")
+    with _get_mp_rester() as mpr:
+        elasticity_doc = mpr.materials.elasticity.search(material_ids=material_ids)
+
+    if not elasticity_doc:
+        return f"No Elasticity data retrieved for material: {material_ids}"
+
+    data_md = f"|##     Elastic Constants   |\n\n"
+    for idx, model in enumerate(elasticity_doc):
+        data_md += f"idx : {idx}"
+        data = model.model_dump()
+        for key, value in data.items():
+            data_md += f"| **{key}  :  {value}   |\n\n"
+
+    return data_md
 
 
 
