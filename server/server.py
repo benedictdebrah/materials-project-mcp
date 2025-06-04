@@ -13,6 +13,8 @@ from pymatgen.phonon.plotter import PhononBSPlotter
 from pymatgen.analysis.wulff import WulffShape
 from emmet.core.electronic_structure import BSPathType
 from typing import Literal
+import base64
+import io 
 from dotenv import load_dotenv
 
 # Materials Project client
@@ -747,57 +749,6 @@ async def get_suggested_substrates(
     
     return sub_md
 
-
-
-@mcp.tool()
-async def construct_wulff_shape(
-    material_id: str = Field(
-        ..., 
-        description="material ID of the material "
-    )
-): 
-    """
-    Constructs a Wulff shape for a material.
-    
-    Args:
-        material_id (str): Materials Project material_id, e.g. 'mp-123'.
-    
-    Returns: 
-        object: image of the wulff shape 
-        
-    """
-    logging.info(f"Getting Wulff shape for material: {material_id}")
-    with _get_mp_rester() as mpr: 
-        surface_data = mpr.surface_properties.search(material_id)
-
-
-    if not surface_data: 
-        return f"No surface data collected for wulff shape"
-    
-    try: 
-        surface_energies = []
-        miller_indices = []
-
-        for surface in surface_data[0].surfaces: 
-            miller_indices.append(surface.miller_index)
-            surface_energies.append(surface.surface_energy)
-        
-        structure = mpr.get_structure_by_material_id(material_id=[material_id])
-        
-        wulff_shape = WulffShape(
-            lattice=structure.lattice, 
-            miller_list=miller_indices, 
-            e_surf_list=surface_energies
-        )
-
-        # plot the shape 
-        fig = wulff_shape.get_plot()
-        fig.suptitle(f"Wulff Shape\nVolume: {wulff_shape.volume:.3f} Ų", fontsize=14)
-        plt.show()
-
-    except Exception as e: 
-        logging.error(f"Error occurred constructing wulff shape: {e}")
-        return f"No wulff shape construted for material: {material_id}"
 
 
 
