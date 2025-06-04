@@ -703,6 +703,67 @@ async def get_elastic_constants(
 
 
 
+ 
+
+@mcp.tool()
+async def get_suggested_substrates(
+    material_id: str = Field(
+        ..., 
+        description="Material ID of the material"
+    )
+): 
+    """
+    Obtains Suggested substrates for a film material. 
+    It helps to find suitable substrate materials for thin films 
+    
+    Args: 
+        material_id (str): material ID of the material 
+    
+    Returns: 
+        str 
+    
+    """
+    logging.info(f"Getting suggested substrates for the material : {material_id}")
+    with _get_mp_rester() as mpr: 
+        substrates_doc = mpr.materials.substrates.search(film_id=material_id)
+
+    if not substrates_doc: 
+        return f"No substrates gotten for material: {material_id}"
+
+    sub_md = f""
+    for idx, data in enumerate(substrates_doc):
+        sub_md += f"## Substrate {idx + 1}\n\n"
+        # Create a detailed view for each substrate
+        sub_md += f"- **Index**: {idx}\n"
+        sub_md += f"- **Substrate Formula**: {getattr(data, 'sub_form', 'N/A')}\n"
+        sub_md += f"- **Substrate ID**: {getattr(data, 'sub_id', 'N/A')}\n"
+        sub_md += f"- **Film Orientation**: {getattr(data, 'film_orient', 'N/A')}\n"
+        sub_md += f"- **Area**: {getattr(data, 'area', 'N/A')}\n"
+        sub_md += f"- **Energy**: {getattr(data, 'energy', 'N/A')}\n"
+        sub_md += f"- **Film ID**: {getattr(data, 'film_id', 'N/A')}\n"
+        sub_md += f"- **Orientation**: {getattr(data, 'orient', 'N/A')}\n\n"
+        sub_md += "---\n\n"
+    
+    return sub_md
+
+
+
+@mcp.tool()
+async def construct_wulff_shape(
+    material_id: str = Field(
+        ..., 
+        description=""
+    )
+): 
+    """
+    Constructs a Wulff shape for a material.
+    
+    
+    """
+    pass 
+
+
+
 
 
 
