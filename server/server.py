@@ -714,7 +714,7 @@ async def get_suggested_substrates(
         ..., 
         description="Material ID of the material"
     )
-): 
+) -> str: 
     """
     Obtains Suggested substrates for a film material. 
     It helps to find suitable substrate materials for thin films 
@@ -751,6 +751,60 @@ async def get_suggested_substrates(
 
 
 
+@mcp.tool()
+async def get_thermo_stability(
+    material_ids: List[str] = Field(
+        ..., 
+        description="Materials IDs of the material"
+    ), 
+    thermo_types: List[str] = Field(
+        default=["GGA_GGA+U_R2SCAN"], 
+        description=""
+    )
+) -> str: 
+    """
+    Obtains thermodynamic stability data for a material
+
+    Args: 
+        material_ids (List[str]) : A list of the material ID(s) eg. ["mp-861883"]
+        thermo_types (List[str]) : 
+
+    Returns: 
+        str: Markdown of the thermodynamic stability data 
+    
+    """
+    logging.info(f"Getting thermodynamic stability for material(s):{material_ids}")
+    with _get_mp_rester() as mpr: 
+        thermo_docs = mpr.materials.thermo.search(
+            material_ids=material_ids, 
+            thermo_types=thermo_types
+        )
+
+    if not thermo_docs: 
+        logging.info("No thermodynamic stability data retrieved for ")
+        return f"No thermodynamic stability data retrieved for materials: {material_ids}"
+    
+    thermo_md = f"Thermodynamic Stability for: {material_ids}"
+    for idx, data in enumerate(thermo_docs):
+        thermo_md += f"\n--- Material {idx + 1} ---\n"
+       
+        energy_above_hull = getattr(data, "energy_above_hull", "Not available")
+        thermo_md += f"| ** | energy_above_hull : {energy_above_hull} | \n"
+      
+        formation_energy = getattr(data, "formation_energy_per_atom", "Not available")
+        thermo_md += f"| ** | formation_energy_per_atom : {formation_energy} | \n"
+        
+        thermo_type = getattr(data, "thermo_type", "Not available")
+        thermo_md += f"| ** | thermo_type : {thermo_type} | \n"
+        
+        
+        is_stable = getattr(data, "is_stable", False)
+        thermo_md += f"| ** | is_stable : {is_stable} | \n"
+    
+        formula_pretty = getattr(data, 'formula_pretty', 'Not available')
+        thermo_md += f"| ** | formula : {formula_pretty} | \n"
+
+    return thermo_md 
 
 
 
