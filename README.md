@@ -107,6 +107,31 @@ mcp install server.py
 
 Note: Make sure to replace `YOUR_API_KEY` with your actual Materials Project API key.
 
+
+## Using it with VScode copilot
+```
+"mcp": {
+    "inputs": [],
+    "servers": {
+      "Materials Project MCP": {
+        "command": "/usr/local/bin/uv",
+        "args": [
+          "run",
+          "--with",
+          "mcp[cli],aiohttp,pydantic,mp_api,pymatgen,emmet-core",
+          "directory to the server.py"
+        ],
+        "env": {
+          "MP_API_KEY": "your api key"
+        }
+      },
+    }
+  },
+  "chat.mcp.discovery.enabled": true,
+  "workbench.secondarySideBar.showLabels": false
+}
+```
+
 ## Features
 
 - Search for materials by elements, band gap range, and stability
