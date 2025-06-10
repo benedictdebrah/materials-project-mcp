@@ -109,6 +109,8 @@ Note: Make sure to replace `YOUR_API_KEY` with your actual Materials Project API
 
 
 ## Using it with VScode copilot
+
+locate Vscode settings.json and add this code.
 ```
 "mcp": {
     "inputs": [],
