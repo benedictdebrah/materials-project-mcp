@@ -138,7 +138,20 @@ locate Vscode settings.json and add this code.
 
 - Search for materials by elements, band gap range, and stability
 - Retrieve crystal structures by Materials Project ID
-- Integration with Claude AI assistant
+- Get electronic band structure plots
+- Retrieve electronic density of states (DOS)
+- Get phonon band structure and phonon DOS
+- Download aqueous ion reference data for Pourbaix diagrams
+- Obtain cohesive energies for materials
+- Retrieve reference energies of isolated neutral atoms
+- Get magnetic properties (ordering, magnetization, moments)
+- Retrieve charge density data
+- Get dielectric properties
+- Obtain X-ray and neutron diffraction patterns
+- Get X-ray absorption spectra (XAFS, XANES, EXAFS)
+- Retrieve elastic constants
+- Find suggested substrates for thin films
+- Get thermodynamic stability data
 
 ## Requirements
 
