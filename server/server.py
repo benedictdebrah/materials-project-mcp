@@ -13,8 +13,6 @@ from pymatgen.phonon.plotter import PhononBSPlotter
 from pymatgen.analysis.wulff import WulffShape
 from emmet.core.electronic_structure import BSPathType
 from typing import Literal
-import base64
-import io 
 from dotenv import load_dotenv
 
 # Materials Project client
@@ -190,7 +188,7 @@ async def get_electronic_bandstructure(
                    "- latimer_munro: Alternative path for cubic systems\n"
                    "- uniform: Uniform k-point sampling (not recommended for plotting)"
     ),
-) -> str:
+):
     """
     Generate and return a electronic band structure plot for a given material.
     
@@ -409,7 +407,7 @@ async def get_cohesive_energy(
             default="atom",
             description="The normalization to use, whether to normalize cohesive energy by number of atoms (deflaut) or by number of formula units  "
         )
-):
+) -> str:
     """
     Obtain the cohesive energy of the structure(s) corresponding to single or multiple material IDs
 
@@ -804,7 +802,94 @@ async def get_thermo_stability(
         formula_pretty = getattr(data, 'formula_pretty', 'Not available')
         thermo_md += f"| ** | formula : {formula_pretty} | \n"
 
-    return thermo_md 
+    return thermo_md
+
+
+@mcp.tool()
+async def get_surface_properties(
+        material_id: str = Field(
+            ...,
+            description="Material ID of the material"
+        ),
+        response_limit: int = Field(
+            ...,
+            description="Response limit for each call"
+        )
+):
+    """
+    Gets Surface properties data for materials as discussed by
+    the methodology by Tran et. al.
+
+    :param
+        material_id: Material ID for the material
+        response_limit (int) : Response limit for each call
+    :return:
+        Markdown of the surface data
+
+    """
+    logging.info(f"Getting surface data for material: {material_id}")
+    with _get_mp_rester() as mpr:
+        surface_docs = mpr.materials.surface_properties.search(material_id)
+
+    if not surface_docs:
+        logging.info(f"No surface data retrieved for material: {material_id}")
+        return f"No surface data retrieved for material: {material_id}"
+
+    surface_md = f"# Surface Properties for material: {material_id}\n\n"
+
+    # surface_docs is a list of surface documents
+    for idx, surface_doc in enumerate(surface_docs):
+        # Access the surfaces from each document
+        if hasattr(surface_doc, 'surfaces') and surface_doc.surfaces:
+            for surface_idx, surface in enumerate(surface_doc.surfaces):
+                miller_index = surface.miller_index
+                miller_str = f"({miller_index[0]}{miller_index[1]}{miller_index[2]})"
+
+                surface_md += f"## Surface {idx + 1}.{surface_idx + 1}: {miller_str}\n\n"
+                surface_md += f"- **Miller Index:** {miller_index}\n"
+                surface_md += f"- **Surface Energy:** {surface.surface_energy:.4f} J/m²\n"
+                surface_md += f"- **Surface Energy (eV/Ų):** {getattr(surface, 'surface_energy_EV_PER_ANG2', 'N/A')}\n"
+                surface_md += f"- **Work Function:** {getattr(surface, 'work_function', 'N/A')} eV\n"
+                surface_md += f"- **Fermi Energy:** {getattr(surface, 'efermi', 'N/A')} eV\n"
+                surface_md += f"- **Area Fraction:** {getattr(surface, 'area_fraction', 'N/A')}\n"
+                surface_md += f"- **Is Reconstructed:** {'Yes' if getattr(surface, 'is_reconstructed', False) else 'No'}\n"
+                surface_md += f"- **Has Wulff Shape:** {'Yes' if getattr(surface, 'has_wulff', False) else 'No'}\n\n"
+
+        # Add material properties from the document
+        surface_md += f"### Material Properties\n\n"
+        surface_md += f"- **Material ID:** {getattr(surface_doc, 'material_id', 'N/A')}\n"
+        surface_md += f"- **Formula:** {getattr(surface_doc, 'formula_pretty', 'N/A')}\n"
+        surface_md += f"- **Crystal System:** {getattr(surface_doc, 'crystal_system', 'N/A')}\n"
+        surface_md += f"- **Space Group:** {getattr(surface_doc, 'space_group', 'N/A')}\n\n"
+
+    return surface_md
+
+
+@mcp.tool()
+async def get_insertion_electrodes(
+    material_id: str 
+):
+    pass 
+
+
+
+@mcp.tool()
+async def get_oxidation_states(
+    material_id : str = Field(
+        ...,
+        description="Material ID for the material"
+    ),
+    formula: str = Field(
+        default="",
+        description="Query by formula including anonymized formula or by including wild cards"
+    )
+): 
+    pass 
+
+
+
+
+
 
 
 
