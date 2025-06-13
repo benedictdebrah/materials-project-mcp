@@ -896,26 +896,6 @@ async def get_grain_boundaries(
     return grain_md
 
 
-@mcp.tool()
-async def get_insertion_electrodes(
-    material_id: str 
-):
-    pass 
-
-
-
-@mcp.tool()
-async def get_oxidation_states(
-    material_id : str = Field(
-        ...,
-        description="Material ID for the material"
-    ),
-    formula: str = Field(
-        default="",
-        description="Query by formula including anonymized formula or by including wild cards"
-    )
-): 
-    pass 
 
 
 
