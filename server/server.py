@@ -812,10 +812,10 @@ async def get_surface_properties(
             description="Material ID of the material"
         ),
         response_limit: int = Field(
-            ...,
+            deflaut=0,
             description="Response limit for each call"
         )
-):
+) -> str:
     """
     Gets Surface properties data for materials as discussed by
     the methodology by Tran et. al.
@@ -863,6 +863,37 @@ async def get_surface_properties(
         surface_md += f"- **Space Group:** {getattr(surface_doc, 'space_group', 'N/A')}\n\n"
 
     return surface_md
+
+
+@mcp.tool()
+async def get_grain_boundaries(
+        material_id: str = Field(
+            ...,
+            description="Material ID of the material"
+        )
+):
+
+    """
+    Get Computed Grain Boundaries for a material.
+
+    :param material_id (str): Material ID of the material
+
+    :return:
+        Markdown of the grain boundaries data
+    """
+    logger.info(f"Getting Grain Boundaries for material: {material_id}")
+    with _get_mp_rester() as mpr:
+        grain_boundary_docs = mpr.materials.grain_boundaries.search(material_id)
+
+    if not grain_boundary_docs:
+        logger.info(f"No Grain Boundaries data for material: {material_id}")
+        return f"No Grain Boundaries data for material: {material_id}"
+
+    grain_md = f"# Grain Boundaries for material: {material_id} \n\n"
+    for idx, data in enumerate(grain_boundary_docs):
+        grain_md += f"- **Initial Structure : ** {getattr(data, "initial_structure", "N/A")}\n\n"
+        grain_md += f"- ** Final Structure : ** {getattr(data, "final_structure", "N/A")} \n\n"
+    return grain_md
 
 
 @mcp.tool()
