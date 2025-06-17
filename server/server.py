@@ -811,10 +811,6 @@ async def get_surface_properties(
             ...,
             description="Material ID of the material"
         ),
-        response_limit: int = Field(
-            deflaut=0,
-            description="Response limit for each call"
-        )
 ) -> str:
     """
     Gets Surface properties data for materials as discussed by
@@ -896,9 +892,147 @@ async def get_grain_boundaries(
     return grain_md
 
 
+@mcp.tool()
+async def get_insertion_electrodes(
+        material_id: str = Field(
+            ...,
+            description="Material ID of the material"
+        )
+) -> str:
+    """
+    Get Insertion Electrodes data for a material.
+
+
+    :param 
+        material_id (str): Material ID of the material
+    :return
+        str: Markdown of the Insertion Electrodes data
+
+    """
+    logger.info(f"Getting Insertion Electrodes data for material: {material_id}")
+    with _get_mp_rester() as mpr:
+        electrodes_docs = mpr.materials.insertion_electrodes.search(material_id)
+
+    
+    if not electrodes_docs:
+        logger.info(f"No Insertion Electrodes data for material: {material_id}")
+        return f"No Insertion Electrodes data for material: {material_id}"
+    
+    electrodes_md = f"# Insertion Electrodes for material: {material_id}\n\n"
+    for idx, data in enumerate(electrodes_docs):
+        electrodes_md += f"## Electrode {idx + 1}\n\n"
+        electrodes_md += f"- **Battery Type:** {getattr(data, 'battery_type', 'N/A')}\n"
+        electrodes_md += f"- **Battery ID:** {getattr(data, 'battery_id', 'N/A')}\n"
+        electrodes_md += f"- **Battery Formula:** {getattr(data, 'battery_formula', 'N/A')}\n"
+        electrodes_md += f"- **Working Ion:** {getattr(data, 'working_ion', 'N/A')}\n"
+        electrodes_md += f"- **Number of Steps:** {getattr(data, 'num_steps', 'N/A')}\n"
+        electrodes_md += f"- **Max Voltage Step:** {getattr(data, 'max_voltage_step', 'N/A')}\n"
+        electrodes_md += f"- **Last Updated:** {getattr(data, 'last_updated', 'N/A')}\n"
+        electrodes_md += f"- **Framework:** {getattr(data, 'framework', 'N/A')}\n"
+        electrodes_md += f"- **Framework Formula:** {getattr(data, 'framework_formula', 'N/A')}\n"
+        electrodes_md += f"- **Elements:** {getattr(data, 'elements', 'N/A')}\n"
+        electrodes_md += f"- **Number of Elements:** {getattr(data, 'nelements', 'N/A')}\n"
+        electrodes_md += f"- **Chemical System:** {getattr(data, 'chemsys', 'N/A')}\n"
+        electrodes_md += f"- **Formula Anonymous:** {getattr(data, 'formula_anonymous', 'N/A')}\n"
+        electrodes_md += f"- **Warnings:** {getattr(data, 'warnings', 'N/A')}\n"
+        electrodes_md += f"- **Formula Charge:** {getattr(data, 'formula_charge', 'N/A')}\n"
+        electrodes_md += f"- **Formula Discharge:** {getattr(data, 'formula_discharge', 'N/A')}\n"
+        electrodes_md += f"- **Max Delta Volume:** {getattr(data, 'max_delta_volume', 'N/A')}\n"
+        electrodes_md += f"- **Average Voltage:** {getattr(data, 'average_voltage', 'N/A')}\n"
+        electrodes_md += f"- **Capacity Gravimetric:** {getattr(data, 'capacity_grav', 'N/A')}\n"
+        electrodes_md += f"- **Capacity Volumetric:** {getattr(data, 'capacity_vol', 'N/A')}\n"
+        electrodes_md += f"- **Energy Gravimetric:** {getattr(data, 'energy_grav', 'N/A')}\n"
+        electrodes_md += f"- **Energy Volumetric:** {getattr(data, 'energy_vol', 'N/A')}\n"
+        electrodes_md += f"- **Fraction A Charge:** {getattr(data, 'fracA_charge', 'N/A')}\n"
+        electrodes_md += f"- **Fraction A Discharge:** {getattr(data, 'fracA_discharge', 'N/A')}\n"
+        electrodes_md += f"- **Stability Charge:** {getattr(data, 'stability_charge', 'N/A')}\n"
+        electrodes_md += f"- **Stability Discharge:** {getattr(data, 'stability_discharge', 'N/A')}\n"
+        electrodes_md += f"- **ID Charge:** {getattr(data, 'id_charge', 'N/A')}\n"
+        electrodes_md += f"- **ID Discharge:** {getattr(data, 'id_discharge', 'N/A')}\n"
+        electrodes_md += f"- **Host Structure:** {getattr(data, 'host_structure', 'N/A')}\n"
+        
+        # Add adjacent pairs information
+        adj_pairs = getattr(data, 'adj_pairs', [])
+        if adj_pairs:
+            electrodes_md += f"\n### Adjacent Pairs:\n"
+            for pair in adj_pairs:
+                     # Use getattr instead of .get for pydantic/model objects
+                electrodes_md += f"- **Formula Charge:** {getattr(pair, 'formula_charge', 'N/A')}\n"
+                electrodes_md += f"- **Formula Discharge:** {getattr(pair, 'formula_discharge', 'N/A')}\n"
+                electrodes_md += f"- **Max Delta Volume:** {getattr(pair, 'max_delta_volume', 'N/A')}\n"
+                electrodes_md += f"- **Average Voltage:** {getattr(pair, 'average_voltage', 'N/A')}\n"
+                electrodes_md += f"- **Capacity Gravimetric:** {getattr(pair, 'capacity_grav', 'N/A')}\n"
+                electrodes_md += f"- **Capacity Volumetric:** {getattr(pair, 'capacity_vol', 'N/A')}\n"
+                electrodes_md += f"- **Energy Gravimetric:** {getattr(pair, 'energy_grav', 'N/A')}\n"
+                electrodes_md += f"- **Energy Volumetric:** {getattr(pair, 'energy_vol', 'N/A')}\n"
+                electrodes_md += f"- **Fraction A Charge:** {getattr(pair, 'fracA_charge', 'N/A')}\n"
+                electrodes_md += f"- **Fraction A Discharge:** {getattr(pair, 'fracA_discharge', 'N/A')}\n"
+                electrodes_md += f"- **Stability Charge:** {getattr(pair, 'stability_charge', 'N/A')}\n"
+                electrodes_md += f"- **Stability Discharge:** {getattr(pair, 'stability_discharge', 'N/A')}\n"
+                electrodes_md += f"- **ID Charge:** {getattr(pair, 'id_charge', 'N/A')}\n"
+                electrodes_md += f"- **ID Discharge:** {getattr(pair, 'id_discharge', 'N/A')}\n"
+        
+    return electrodes_md
 
 
 
+@mcp.tool()
+async def get_oxidation_states(
+    material_id : str = Field(
+        ...,
+        description="Material ID for the material"
+    ),
+    formula: Optional[str] = Field(
+        default=None, 
+        description="Query by formula including anonymized formula or by including wild cards"
+    )
+) -> str:
+    """
+    Get oxidation states for a given material ID or formula.
+    
+    This function retrieves the oxidation states of elements in a material
+    from the Materials Project database. It can be queried by material ID or
+    by formula, including anonymized formulas or wildcards.
+    
+    Args:
+        material_id: The Materials Project ID of the material (e.g. 'mp-149')
+        formula: Optional formula to query oxidation states (e.g. 'LiFeO2')
+        
+    Returns:
+        str: A formatted markdown string containing the oxidation states information
+        
+    Example:
+        >>> get_oxidation_states('mp-149')
+        Returns oxidation states for silicon (mp-149)
+    """
+    logger.info(f"Fetching oxidation states for {material_id} with formula {formula}...")
+    with _get_mp_rester() as mpr:
+        oxidation_states = mpr.materials.oxidation_states.search(
+            material_ids=material_id,
+            formula=formula
+        )
+
+    if not oxidation_states:
+        return f"No oxidation states found for {material_id}."
+
+    oxidation_md = f"## Oxidation States for {material_id}\n\n"
+    for idx, data in enumerate(oxidation_states):
+        #oxidation_md = f"## Oxidation States for {material_id}\n\n"
+        #oxidation_md += f"- **Material ID**: {material_id}\n"
+        oxidation_md += f"- **Formula**: {getattr(data, "formula_pretty", "N/A")}\n\n"
+        oxidation_md += f"- **formula_anonymous**: {getattr(data, "formula_anonymous", "N/A")}\n\n"
+        oxidation_md += f"- **density** : {getattr(data, "density", "N/A")}\n\n"
+        oxidation_md += f"- **volume**: {getattr(data, "volume", "N/A")}\n\n"
+        oxidation_md += f"- **symmetry**: {getattr(data, "symmetry", "N/A")}\n\n"
+        oxidation_md += f"- **nelements**: {getattr(data, "nelements", "N/A")}\n\n"
+        oxidation_md += f"- **density_atomic**: {getattr(data, "density_atomic", "N/A")}\n\n"
+        oxidation_md += f"- **property_name: {getattr(data, "property_name", "N/A")}\n\n"
+        oxidation_md += f"- **structure**: {getattr(data, "structure", "N/A")}\n\n"
+        oxidation_md += f"- **possible_species**: {getattr(data, "possible_species", "N/A")}\n\n"
+        oxidation_md += f"- **possible_valances**: {getattr(data, "possible_valences", "N/A")}\n\n"
+        oxidation_md += f"- **method**: {getattr(data, "method", "N/A")}\n\n"
+
+    return oxidation_md
 
 
 
