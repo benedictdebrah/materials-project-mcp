@@ -811,10 +811,6 @@ async def get_surface_properties(
             ...,
             description="Material ID of the material"
         ),
-        response_limit: int = Field(
-            deflaut=0,
-            description="Response limit for each call"
-        )
 ) -> str:
     """
     Gets Surface properties data for materials as discussed by
@@ -976,15 +972,7 @@ async def get_insertion_electrodes(
                 electrodes_md += f"- **ID Charge:** {getattr(pair, 'id_charge', 'N/A')}\n"
                 electrodes_md += f"- **ID Discharge:** {getattr(pair, 'id_discharge', 'N/A')}\n"
         
-        # Add entries composition summary information
-       # entries_summary = getattr(data, 'entries_composition_summary', {})
-       # electrodes_md += f"\n### Entries Composition Summary:\n"
-      #  electrodes_md += f"- **All Formulas:** {getattr(entries_summary, 'all_formulas', 'N/A')}\n"
-       # electrodes_md += f"- **All Chemical Systems:** {getattr(entries_summary, 'all_chemsys', 'N/A')}\n"
-      #  electrodes_md += f"- **All Formula Anonymous:** {getattr(entries_summary, 'all_formula_anonymous', 'N/A')}\n"
-       # electrodes_md += f"- **All Elements:** {getattr(entries_summary, 'all_elements', 'N/A')}\n" entries_comp_summary = getattr(data, 'entries_comp_summary', [])
     return electrodes_md
-
 
 
 
@@ -994,8 +982,8 @@ async def get_oxidation_states(
         ...,
         description="Material ID for the material"
     ),
-    formula: str = Field(
-        default="",
+    formula: Optional[str] = Field(
+        default=None, 
         description="Query by formula including anonymized formula or by including wild cards"
     )
 ) -> str:
@@ -1021,7 +1009,7 @@ async def get_oxidation_states(
     with _get_mp_rester() as mpr:
         oxidation_states = mpr.materials.oxidation_states.search(
             material_ids=material_id,
-            #formula=formula
+            formula=formula
         )
 
     if not oxidation_states:
