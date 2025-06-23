@@ -5,7 +5,8 @@ A Model Context Protocol (MCP) server for querying the Materials Project databas
 ## Requirements
 
 - **Materials Project API Key** - [Get one here](https://materialsproject.org/) (free account required)
-- **Docker Desktop** (must be running) OR **Python 3.12+** with [uv](https://github.com/astral-sh/uv)
+- **Docker Desktop** (must be running)
+- **Python 3.12+** with [uv](https://github.com/astral-sh/uv)
 
 
 
