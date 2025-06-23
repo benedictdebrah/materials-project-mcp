@@ -1,0 +1,9 @@
+services:
+  materials-project-mcp:
+    image: benedict2002/materials-project-mcp:latest
+    container_name: materials-mcp
+    environment:
+      - MP_API_KEY=${MP_API_KEY}
+    restart: unless-stopped
+    stdin_open: true
+    tty: true

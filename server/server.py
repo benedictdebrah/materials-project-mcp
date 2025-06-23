@@ -1041,5 +1041,5 @@ async def get_oxidation_states(
 
 
 if __name__ == "__main__":
-    logger.info("Starting Materials Project MCP server...")
-    mcp.run()
+    # Initialize and run the server
+    mcp.run(transport='stdio')

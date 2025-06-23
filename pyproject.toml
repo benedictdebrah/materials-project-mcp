@@ -40,6 +40,7 @@ dependencies = [
     "emmet==2018.6.7",
     "emmet-core==0.84.6",
     "executing==2.2.0",
+    "fastapi>=0.115.13",
     "fireworks==2.0.4",
     "flask==3.1.1",
     "flask-paginate==2024.4.12",
