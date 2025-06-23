@@ -1,0 +1,15 @@
+{
+    "servers": {
+        "Materials Project": {
+            "type": "stdio",
+            "command": "uv",
+            "args": [
+                "run",
+                "--with",
+                "mcp[cli],aiohttp,pydantic,mp_api,pymatgen,emmet-core",
+                "python",
+                "/home/robot/Desktop/projects/materials-project-mcp/server/server.py"
+            ]
+        }
+    }
+}

@@ -2,7 +2,7 @@ import os
 import logging
 from typing import Optional, List, Union
 from mcp.server.fastmcp import FastMCP
-from pydantic import Field
+from pydantic import Field, AnyUrl
 import matplotlib.pyplot as plt
 from pymatgen.electronic_structure.plotter import BSPlotter
 from pymatgen.electronic_structure.bandstructure import BandStructureSymmLine
@@ -14,6 +14,7 @@ from pymatgen.analysis.wulff import WulffShape
 from emmet.core.electronic_structure import BSPathType
 from typing import Literal
 from dotenv import load_dotenv
+from mcp import types 
 
 # Materials Project client
 from mp_api.client import MPRester
@@ -1034,6 +1035,34 @@ async def get_oxidation_states(
 
     return oxidation_md
 
+
+
+@mcp.resource(uri="materials_docs://{filename}")
+async def get_materials_docs(
+    filename: str
+) -> str: 
+    """
+    Retrieve docs from the markdown folder
+    
+    Args:
+        filename (str): The name of the file to retrieve from the folder eg. apidocs or docsmaterials
+        
+    """
+    from utils.utility_functions import MarkdownResourceManager, MARKDOWN_FOLDER
+    logger.info(f"Retrieving documentation file: {filename}")
+    resource_manager = MarkdownResourceManager(MARKDOWN_FOLDER)
+    try: 
+        resource_manager.load_files()
+
+        if filename not in resource_manager.files:
+            logger.error(f"File {filename} not found in the documentation resources.")
+            return f"File {filename} not found in the documentation resources."
+        file_content = resource_manager.files[filename].content
+        print(file_content)
+        return file_content
+    except Exception as e:
+        logger.error(f"Error retrieving documentation file {filename}: {e}")
+        return f"Error retrieving documentation file {filename}: {e}"
 
 
 
