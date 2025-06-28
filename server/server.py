@@ -13,11 +13,9 @@ from pymatgen.phonon.plotter import PhononBSPlotter
 from pymatgen.analysis.wulff import WulffShape
 from emmet.core.electronic_structure import BSPathType
 from typing import Literal
-from dotenv import load_dotenv
-from mcp import types 
-
-# Materials Project client
+from dotenv import load_dotenv 
 from mp_api.client import MPRester
+
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -1034,6 +1032,72 @@ async def get_oxidation_states(
         oxidation_md += f"- **method**: {getattr(data, "method", "N/A")}\n\n"
 
     return oxidation_md
+
+@mcp.tool()
+async def construct_wulff_shape(
+    material_id: str = Field(
+        ..., 
+        description="material ID of the material "
+    )
+): 
+    """
+    Constructs a Wulff shape for a material.
+    
+    Args:
+        material_id (str): Materials Project material_id, e.g. 'mp-123'.
+    
+    Returns: 
+        object: image of the wulff shape 
+        
+    """
+    logging.info(f"Getting Wulff shape for material: {material_id}")
+    with _get_mp_rester() as mpr: 
+        surface_data = mpr.surface_properties.search(material_id)
+
+
+    if not surface_data: 
+        return f"No surface data collected for wulff shape"
+    
+    try: 
+        surface_energies = []
+        miller_indices = []
+
+        for surface in surface_data[0].surfaces: 
+            miller_indices.append(surface.miller_index)
+            surface_energies.append(surface.surface_energy)
+        
+        structure = mpr.get_structure_by_material_id(material_id=[material_id])
+        
+        wulff_shape = WulffShape(
+            lattice=structure.lattice, 
+            miller_list=miller_indices, 
+            e_surf_list=surface_energies
+        )
+
+        # plot the shape 
+        import io 
+        import base64
+        fig = wulff_shape.get_plot()
+        #fig.suptitle(f"Wulff Shape\nVolume: {wulff_shape.volume:.3f} Ų", fontsize=14)
+        buffer = io.BytesIO()
+        #fig.savefig(buffer, format='png', dpi=300, bbox_inches='tight')
+        buffer.seek(0)
+        image_base64 = base64.b64encode(buffer.read()).decode()
+        #plt.close(fig) 
+        return {
+            "success": True,
+            "material_id": material_id,
+            "volume": round(wulff_shape.volume, 3),
+            "surface_count": len(surface_energies),
+            "miller_indices": miller_indices,
+            "surface_energies": surface_energies,
+            "image_base64": image_base64,
+            "message": f"Wulff shape constructed for {material_id}"
+        }
+
+    except Exception as e: 
+        logging.error(f"Error occurred constructing wulff shape: {e}")
+        return f"No wulff shape construted for material: {material_id}"
 
 
 
