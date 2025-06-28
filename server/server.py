@@ -15,6 +15,8 @@ from emmet.core.electronic_structure import BSPathType
 from typing import Literal
 from dotenv import load_dotenv 
 from mp_api.client import MPRester
+import io 
+import base64
 
 
 # Setup logging
@@ -218,11 +220,37 @@ async def get_electronic_bandstructure(
 
     if not isinstance(bs, BandStructureSymmLine):
         return f"Cannot plot `{path_type}` band structure. Only line-mode paths are plottable."
-
+    
+    # Generate the plot 
     plotter = BSPlotter(bs)
     ax = plotter.get_plot()
     fig = ax.get_figure()  
-    fig.show()  
+    
+    # save to buffer 
+    buffer = io.BytesIO()
+    fig.savefig(buffer, format='png', dpi=300, bbox_inches='tight')
+    plt.close(fig)  # Close the figure to free memory
+
+    # figure dimensions 
+    fig_width = fig.get_figwidth() * fig.dpi
+    fig_height = fig.get_figheight() * fig.dpi
+
+
+    band_image_data = buffer.getvalue()
+    image_base64 = base64.b64encode(band_image_data).decode('ascii')
+
+    return {
+        "success": True,   
+        "material_id": material_id,
+        "image_base64": image_base64,
+        "metadata": {
+               # "material_id": material_id,
+                "path_type": path_type,
+                "description": f"Band structure plot for material {material_id} using {path_type} path",
+                "width": int(fig_width),
+                "height": int(fig_height)
+            }
+    }
 
 
 @mcp.tool()
@@ -293,8 +321,31 @@ async def get_phonon_bandstructure(
     plt.title(f"Phonon Band Structure for {material_id}")
     plt.ylabel("Frequency (THz)")
     plt.tight_layout()
+    # Save the figure to a buffer
+    buffer = io.BytesIO()
+    fig.savefig(buffer, format='png', dpi=300, bbox_inches='tight')
+    plt.close(fig)
+
+    # Convert the buffer to base64
+    phonon_image_data = buffer.getvalue()
+    image_base64 = base64.b64encode(phonon_image_data).decode('ascii')
     
-    return fig  
+    # figure dimensions
+    fig_width = fig.get_figwidth() * fig.dpi
+    fig_height = fig.get_figheight() * fig.dpi
+
+    
+    return {
+        "success": True,
+        "material_id": material_id,
+        "image_base64": image_base64,
+        "metadata": {
+            "path_type": "phonon",
+            "description": f"Phonon band structure plot for material {material_id}",
+            "width": int(fig_width),
+            "height": int(fig_height)
+        }
+    }
  
 
 
@@ -1080,9 +1131,10 @@ async def construct_wulff_shape(
         fig = wulff_shape.get_plot()
         #fig.suptitle(f"Wulff Shape\nVolume: {wulff_shape.volume:.3f} Ų", fontsize=14)
         buffer = io.BytesIO()
-        #fig.savefig(buffer, format='png', dpi=300, bbox_inches='tight')
+        fig.savefig(buffer, format='png', dpi=300, bbox_inches='tight')
         buffer.seek(0)
         image_base64 = base64.b64encode(buffer.read()).decode()
+        # get the image
         #plt.close(fig) 
         return {
             "success": True,
