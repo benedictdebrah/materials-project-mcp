@@ -2,3 +2,7 @@
 .env
 __pycache__
 .idea/*
+.vscode/*
+.vscode/mcp.json
+markdown_folder/
+.vscode/
