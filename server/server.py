@@ -2,7 +2,7 @@ import os
 import logging
 from typing import Optional, List, Union
 from mcp.server.fastmcp import FastMCP
-from pydantic import Field
+from pydantic import Field, AnyUrl
 import matplotlib.pyplot as plt
 from pymatgen.electronic_structure.plotter import BSPlotter
 from pymatgen.electronic_structure.bandstructure import BandStructureSymmLine
@@ -13,10 +13,11 @@ from pymatgen.phonon.plotter import PhononBSPlotter
 from pymatgen.analysis.wulff import WulffShape
 from emmet.core.electronic_structure import BSPathType
 from typing import Literal
-from dotenv import load_dotenv
-
-# Materials Project client
+from dotenv import load_dotenv 
 from mp_api.client import MPRester
+import io 
+import base64
+
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -219,11 +220,37 @@ async def get_electronic_bandstructure(
 
     if not isinstance(bs, BandStructureSymmLine):
         return f"Cannot plot `{path_type}` band structure. Only line-mode paths are plottable."
-
+    
+    # Generate the plot 
     plotter = BSPlotter(bs)
     ax = plotter.get_plot()
     fig = ax.get_figure()  
-    fig.show()  
+    
+    # save to buffer 
+    buffer = io.BytesIO()
+    fig.savefig(buffer, format='png', dpi=300, bbox_inches='tight')
+    plt.close(fig)  # Close the figure to free memory
+
+    # figure dimensions 
+    fig_width = fig.get_figwidth() * fig.dpi
+    fig_height = fig.get_figheight() * fig.dpi
+
+
+    band_image_data = buffer.getvalue()
+    image_base64 = base64.b64encode(band_image_data).decode('ascii')
+
+    return {
+        "success": True,   
+        "material_id": material_id,
+        "image_base64": image_base64,
+        "metadata": {
+               # "material_id": material_id,
+                "path_type": path_type,
+                "description": f"Band structure plot for material {material_id} using {path_type} path",
+                "width": int(fig_width),
+                "height": int(fig_height)
+            }
+    }
 
 
 @mcp.tool()
@@ -294,8 +321,31 @@ async def get_phonon_bandstructure(
     plt.title(f"Phonon Band Structure for {material_id}")
     plt.ylabel("Frequency (THz)")
     plt.tight_layout()
+    # Save the figure to a buffer
+    buffer = io.BytesIO()
+    fig.savefig(buffer, format='png', dpi=300, bbox_inches='tight')
+    plt.close(fig)
+
+    # Convert the buffer to base64
+    phonon_image_data = buffer.getvalue()
+    image_base64 = base64.b64encode(phonon_image_data).decode('ascii')
     
-    return fig  
+    # figure dimensions
+    fig_width = fig.get_figwidth() * fig.dpi
+    fig_height = fig.get_figheight() * fig.dpi
+
+    
+    return {
+        "success": True,
+        "material_id": material_id,
+        "image_base64": image_base64,
+        "metadata": {
+            "path_type": "phonon",
+            "description": f"Phonon band structure plot for material {material_id}",
+            "width": int(fig_width),
+            "height": int(fig_height)
+        }
+    }
  
 
 
@@ -1034,6 +1084,101 @@ async def get_oxidation_states(
 
     return oxidation_md
 
+@mcp.tool()
+async def construct_wulff_shape(
+    material_id: str = Field(
+        ..., 
+        description="material ID of the material "
+    )
+): 
+    """
+    Constructs a Wulff shape for a material.
+    
+    Args:
+        material_id (str): Materials Project material_id, e.g. 'mp-123'.
+    
+    Returns: 
+        object: image of the wulff shape 
+        
+    """
+    logging.info(f"Getting Wulff shape for material: {material_id}")
+    with _get_mp_rester() as mpr: 
+        surface_data = mpr.surface_properties.search(material_id)
+
+
+    if not surface_data: 
+        return f"No surface data collected for wulff shape"
+    
+    try: 
+        surface_energies = []
+        miller_indices = []
+
+        for surface in surface_data[0].surfaces: 
+            miller_indices.append(surface.miller_index)
+            surface_energies.append(surface.surface_energy)
+        
+        structure = mpr.get_structure_by_material_id(material_id=[material_id])
+        
+        wulff_shape = WulffShape(
+            lattice=structure.lattice, 
+            miller_list=miller_indices, 
+            e_surf_list=surface_energies
+        )
+
+        # plot the shape 
+        import io 
+        import base64
+        fig = wulff_shape.get_plot()
+        #fig.suptitle(f"Wulff Shape\nVolume: {wulff_shape.volume:.3f} Ų", fontsize=14)
+        buffer = io.BytesIO()
+        fig.savefig(buffer, format='png', dpi=300, bbox_inches='tight')
+        buffer.seek(0)
+        image_base64 = base64.b64encode(buffer.read()).decode()
+        # get the image
+        #plt.close(fig) 
+        return {
+            "success": True,
+            "material_id": material_id,
+            "volume": round(wulff_shape.volume, 3),
+            "surface_count": len(surface_energies),
+            "miller_indices": miller_indices,
+            "surface_energies": surface_energies,
+            "image_base64": image_base64,
+            "message": f"Wulff shape constructed for {material_id}"
+        }
+
+    except Exception as e: 
+        logging.error(f"Error occurred constructing wulff shape: {e}")
+        return f"No wulff shape construted for material: {material_id}"
+
+
+
+@mcp.resource(uri="materials_docs://{filename}")
+async def get_materials_docs(
+    filename: str
+) -> str: 
+    """
+    Retrieve docs from the markdown folder
+    
+    Args:
+        filename (str): The name of the file to retrieve from the folder eg. apidocs or docsmaterials
+        
+    """
+    from utils.utility_functions import MarkdownResourceManager, MARKDOWN_FOLDER
+    logger.info(f"Retrieving documentation file: {filename}")
+    resource_manager = MarkdownResourceManager(MARKDOWN_FOLDER)
+    try: 
+        resource_manager.load_files()
+
+        if filename not in resource_manager.files:
+            logger.error(f"File {filename} not found in the documentation resources.")
+            return f"File {filename} not found in the documentation resources."
+        file_content = resource_manager.files[filename].content
+        print(file_content)
+        return file_content
+    except Exception as e:
+        logger.error(f"Error retrieving documentation file {filename}: {e}")
+        return f"Error retrieving documentation file {filename}: {e}"
 
 
 
