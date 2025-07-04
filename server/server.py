@@ -17,8 +17,10 @@ from dotenv import load_dotenv
 from mp_api.client import MPRester
 import io 
 import base64
+import sys  
 
 
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("materials_project_mcp")
@@ -1169,7 +1171,6 @@ async def get_materials_docs(
     resource_manager = MarkdownResourceManager(MARKDOWN_FOLDER)
     try: 
         resource_manager.load_files()
-
         if filename not in resource_manager.files:
             logger.error(f"File {filename} not found in the documentation resources.")
             return f"File {filename} not found in the documentation resources."
@@ -1181,7 +1182,12 @@ async def get_materials_docs(
         return f"Error retrieving documentation file {filename}: {e}"
 
 
-
+@mcp.prompt(name="get_electronic_bandstructure")
+async def BandStructurePrompt() -> str:
+   """Prompt for retrieving electronic band structure data."""
+   from utils.prompts_templates import ElectronicBandStructurePrompt
+    # I want to return 
+   return ElectronicBandStructurePrompt.template
 
 
 
