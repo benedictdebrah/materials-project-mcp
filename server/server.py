@@ -228,31 +228,48 @@ async def get_electronic_bandstructure(
     ax = plotter.get_plot()
     fig = ax.get_figure()  
     
-    # save to buffer 
+
+
+    plt.title(f"Band Structure for {material_id} using {path_type} path")   
+    plt.ylabel("Energy (eV)")
+    plt.tight_layout()
+    #plot the image 
+    # Save the figure to a buffer
     buffer = io.BytesIO()
-    fig.savefig(buffer, format='png', dpi=300, bbox_inches='tight')
-    plt.close(fig)  # Close the figure to free memory
+    fig.savefig(buffer, format='png', dpi=150, bbox_inches='tight')
+    buffer.seek(0)
+    #plt.close(fig)  # Close the figure to free memory
+    # return image object 
+    return fig
 
-    # figure dimensions 
-    fig_width = fig.get_figwidth() * fig.dpi
-    fig_height = fig.get_figheight() * fig.dpi
+    
 
 
-    band_image_data = buffer.getvalue()
-    image_base64 = base64.b64encode(band_image_data).decode('ascii')
+    ## save to buffer 
+    #buffer = io.BytesIO()
+    #fig.savefig(buffer, format='png', dpi=70, bbox_inches='tight')
+    #plt.close(fig)  # Close the figure to free memory
 
-    return {
-        "success": True,   
-        "material_id": material_id,
-        "image_base64": image_base64,
-        "metadata": {
-               # "material_id": material_id,
-                "path_type": path_type,
-                "description": f"Band structure plot for material {material_id} using {path_type} path",
-                "width": int(fig_width),
-                "height": int(fig_height)
-            }
-    }
+    ## figure dimensions 
+    #fig_width = fig.get_figwidth() * fig.dpi
+    #fig_height = fig.get_figheight() * fig.dpi
+
+
+    #band_image_data = buffer.getvalue()
+    #image_base64 = base64.b64encode(band_image_data).decode('ascii')
+
+    #return {
+    #    "success": True,   
+    #    "material_id": material_id,
+    #    "image_base64": image_base64[:40000],
+    #    "metadata": {
+    #           # "material_id": material_id,
+    #            "path_type": path_type,
+    #            "description": f"Band structure plot for material {material_id} using {path_type} path",
+    #            "width": int(fig_width),
+    #            "height": int(fig_height)
+    #        }
+    #}
 
 
 @mcp.tool()
@@ -1188,6 +1205,40 @@ async def BandStructurePrompt() -> str:
    from utils.prompts_templates import ElectronicBandStructurePrompt
     # I want to return 
    return ElectronicBandStructurePrompt.template
+
+
+@mcp.tool()
+async def get_doi(
+    material_id: str = Field(
+        ..., 
+        description="Material ID of the material"
+    )
+) -> str: 
+    """
+    Get DOI  and bibTex reference for a given material ID.
+    
+    Args:
+        material_id (str): The Materials Project ID of the material (e.g. 'mp-149')
+    Returns:
+        str: A formatted markdown string containing the DOI and bibTex reference
+    """
+    logger.info("Fetching DOI for material ID {material_id}...")
+    with _get_mp_rester() as mpr:
+        doi_data = mpr.doi.get_data_by_id(material_id)
+
+    if not doi_data:
+        return f"No DOI found for material ID {material_id}."
+    
+    dos_markdown = f"## DOI Information for {material_id}\n\n"
+    dos_markdown += f"- **DOI:** {doi_data.doi} \n\n"
+    dos_markdown += f"- **BibTeX:**\n```\n{doi_data.bibtex}\n```\n"
+    
+    return dos_markdown
+
+
+
+
+
 
 
 
