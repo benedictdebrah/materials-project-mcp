@@ -28,14 +28,7 @@ load_dotenv()
 API_KEY = os.environ.get("MP_API_KEY")
 
 # Create the MCP server instance
-mcp = FastMCP(
-    name="Materials Project",
-    version="0.0.1",
-    description=(
-        "A Model Context Protocol (MCP) server that exposes query tools "
-        "for the Materials Project database using the mp_api client."
-    ),
-)
+mcp = FastMCP()
 
 
 def _get_mp_rester() -> MPRester:
